@@ -508,15 +508,15 @@ export const HeartBalloons: React.FC<HeartBalloonsProps> = ({
     removeBalloon(balloon.id);
 
     // Keep within screen edges
-    const clampedX = Math.max(90, Math.min(window.innerWidth - 90, clientX));
+    const clampedX = Math.max(110, Math.min(window.innerWidth - 110, clientX));
     const clampedY = Math.max(35, Math.min(window.innerHeight - 35, clientY));
 
-    // Spawn cute, small "I Love You ❤️" badge directly at the blasted location
+    // Spawn cute, small "love u bangaram... ❤️" badge directly at the blasted location
     const newBlastedText: BlastedTextItem = {
       id: `blast-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       x: clampedX,
       y: clampedY,
-      text: 'I Love You ❤️',
+      text: 'love u bangaram... ❤️',
     };
 
     setBlastedTexts((prev) => [...prev, newBlastedText]);
