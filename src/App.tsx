@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { SceneType } from './types';
 import { ParticleCanvas } from './components/ParticleCanvas';
 import { SceneNavigation } from './components/SceneNavigation';
+import { HeartBalloons } from './components/HeartBalloons';
 
 // Individual Scenes
 import { OpeningScene } from './components/scenes/OpeningScene';
@@ -18,6 +19,7 @@ import { FinalCelebration } from './components/scenes/FinalCelebration';
 
 export const App: React.FC = () => {
   const [currentScene, setCurrentScene] = useState<SceneType>('opening');
+  const [balloonTrigger, setBalloonTrigger] = useState<number>(0);
 
   // Smooth scroll to top whenever scene changes
   useEffect(() => {
@@ -32,10 +34,17 @@ export const App: React.FC = () => {
     setCurrentScene('opening');
   };
 
+  const handleManualReleaseBalloons = () => {
+    setBalloonTrigger((prev) => prev + 1);
+  };
+
   return (
     <div className="app-container">
       {/* Background Cinematic Particles (Golden Dust, Floating Petals, Hearts) */}
       <ParticleCanvas />
+
+      {/* Heart-Shaped Balloons Ascending Upwards on every Page Change */}
+      <HeartBalloons triggerKey={`${currentScene}-${balloonTrigger}`} />
 
       {/* Cinematic Vignette Overlay */}
       <div className="cinematic-vignette" />
@@ -44,6 +53,7 @@ export const App: React.FC = () => {
       <SceneNavigation
         currentScene={currentScene}
         onSelectScene={handleSceneTransition}
+        onReleaseBalloons={handleManualReleaseBalloons}
       />
 
       {/* Scene Content with Cinematic Transitions */}

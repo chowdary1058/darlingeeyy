@@ -204,6 +204,46 @@ class RomanticAudioEngine {
     }
   }
 
+  public playBalloonPop() {
+    try {
+      this.initAudioContext();
+      if (!this.audioCtx || this.isMuted) return;
+
+      const now = this.audioCtx.currentTime;
+      // Soft gentle balloon pop sound
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(450, now);
+      osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+
+      gain.gain.setValueAtTime(0.18 * this.volume, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.1);
+
+      // Light sparkle tone
+      const sparkle = this.audioCtx.createOscillator();
+      const sGain = this.audioCtx.createGain();
+      sparkle.type = 'sine';
+      sparkle.frequency.setValueAtTime(1174.66, now + 0.02); // D6
+      sparkle.frequency.exponentialRampToValueAtTime(1760, now + 0.12); // A6
+      sGain.gain.setValueAtTime(0.06 * this.volume, now + 0.02);
+      sGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+      sparkle.connect(sGain);
+      sGain.connect(this.audioCtx.destination);
+      sparkle.start(now + 0.02);
+      sparkle.stop(now + 0.22);
+    } catch {
+      // Safe
+    }
+  }
+
   public playBlowCandle() {
     try {
       this.initAudioContext();

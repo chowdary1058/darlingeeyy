@@ -6,14 +6,24 @@ import { Sparkles } from 'lucide-react';
 interface SceneNavigationProps {
   currentScene: SceneType;
   onSelectScene: (scene: SceneType) => void;
+  onReleaseBalloons?: () => void;
 }
 
-export const SceneNavigation: React.FC<SceneNavigationProps> = ({ currentScene, onSelectScene }) => {
+export const SceneNavigation: React.FC<SceneNavigationProps> = ({
+  currentScene,
+  onSelectScene,
+  onReleaseBalloons,
+}) => {
   const currentIndex = SCENES.findIndex((s) => s.id === currentScene);
 
   const handleNavClick = (sceneId: SceneType) => {
     audioService.playSoftClick();
     onSelectScene(sceneId);
+  };
+
+  const handleBalloonBtn = () => {
+    audioService.playChime();
+    onReleaseBalloons?.();
   };
 
   return (
@@ -96,6 +106,40 @@ export const SceneNavigation: React.FC<SceneNavigationProps> = ({ currentScene, 
         >
           {SCENES[currentIndex]?.shortTitle}
         </span>
+
+        {onReleaseBalloons && (
+          <button
+            onClick={handleBalloonBtn}
+            title="Release Heart Balloons 🎈"
+            aria-label="Release Heart Balloons"
+            style={{
+              background: 'rgba(214, 40, 85, 0.18)',
+              border: '1px solid rgba(255, 111, 145, 0.35)',
+              borderRadius: '9999px',
+              padding: '2px 8px',
+              cursor: 'pointer',
+              color: '#FF758F',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              marginLeft: '4px',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(214, 40, 85, 0.35)';
+              e.currentTarget.style.transform = 'scale(1.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(214, 40, 85, 0.18)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <span>🎈</span>
+            <span style={{ fontSize: '0.7rem' }}>Balloons</span>
+          </button>
+        )}
       </div>
     </nav>
   );
