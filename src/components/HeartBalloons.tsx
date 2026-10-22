@@ -84,12 +84,11 @@ interface BalloonItem {
   zIndex: number;
 }
 
-interface RevealMessage {
+interface BlastedTextItem {
   id: string;
+  x: number;
+  y: number;
   text: string;
-  subtext: string;
-  originX: number;
-  originY: number;
 }
 
 interface HeartBalloonsProps {
@@ -302,10 +301,9 @@ export const HeartBalloons: React.FC<HeartBalloonsProps> = ({
   maxBalloons = 14,
 }) => {
   const [balloons, setBalloons] = useState<BalloonItem[]>([]);
-  const [activeReveal, setActiveReveal] = useState<RevealMessage | null>(null);
+  const [blastedTexts, setBlastedTexts] = useState<BlastedTextItem[]>([]);
   const containerId = useId();
   const balloonCounterRef = useRef<number>(0);
-  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Helper to create a single balloon launching from bottom-left or bottom-right
   const createBalloon = useCallback(
@@ -434,7 +432,7 @@ export const HeartBalloons: React.FC<HeartBalloonsProps> = ({
     setBalloons((prev) => prev.filter((b) => b.id !== id));
   }, []);
 
-  // Handle clicking or tapping a balloon: Pop + Confetti Burst + "I Love You ❤️" Reveal
+  // Handle clicking or tapping a balloon: Pop + Confetti Burst + Spawn Small "I Love You ❤️" at the blasted area
   const handleBalloonClick = (
     e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     balloon: BalloonItem
@@ -446,14 +444,14 @@ export const HeartBalloons: React.FC<HeartBalloonsProps> = ({
     audioService.playBalloonPop();
     setTimeout(() => audioService.playChime(), 120);
 
-    // Get click coordinates
+    // Get exact blasted coordinates
     let clientX = window.innerWidth / 2;
     let clientY = window.innerHeight / 2;
 
-    if ('clientX' in e) {
+    if ('clientX' in e && typeof e.clientX === 'number') {
       clientX = e.clientX;
       clientY = e.clientY;
-    } else if (e.touches && e.touches[0]) {
+    } else if ('touches' in e && e.touches && e.touches[0]) {
       clientX = e.touches[0].clientX;
       clientY = e.touches[0].clientY;
     }
@@ -461,7 +459,7 @@ export const HeartBalloons: React.FC<HeartBalloonsProps> = ({
     const normX = clientX / window.innerWidth;
     const normY = clientY / window.innerHeight;
 
-    // Trigger magical heart confetti and glitter explosion
+    // Trigger magical heart confetti and glitter explosion at blasted point
     try {
       const heartShape =
         typeof confetti.shapeFromPath === 'function'
@@ -470,11 +468,11 @@ export const HeartBalloons: React.FC<HeartBalloonsProps> = ({
             })
           : 'circle';
 
-      // 1. Initial burst of red hearts
+      // Initial burst of red hearts & gold sparkles
       confetti({
-        particleCount: 26,
-        spread: 70,
-        startVelocity: 24,
+        particleCount: 22,
+        spread: 65,
+        startVelocity: 20,
         origin: { x: normX, y: normY },
         colors: [
           balloon.theme.primary,
@@ -484,24 +482,24 @@ export const HeartBalloons: React.FC<HeartBalloonsProps> = ({
           '#FFFFFF',
         ],
         shapes: [heartShape, 'circle'],
-        ticks: 100,
+        ticks: 90,
         gravity: 0.7,
-        scalar: 1.15,
+        scalar: 1.05,
       });
 
-      // 2. Secondary soft shimmer
+      // Secondary gentle glitter
       setTimeout(() => {
         confetti({
-          particleCount: 16,
-          spread: 90,
-          startVelocity: 16,
+          particleCount: 12,
+          spread: 80,
+          startVelocity: 14,
           origin: { x: normX, y: normY },
-          colors: ['#D8B879', '#FFB3C1', '#FFF4E8'],
-          ticks: 70,
+          colors: ['#D8B879', '#FFCCD5', '#FFF4E8'],
+          ticks: 60,
           gravity: 0.5,
-          scalar: 0.85,
+          scalar: 0.8,
         });
-      }, 150);
+      }, 120);
     } catch {
       // Safe fallback
     }
@@ -509,31 +507,24 @@ export const HeartBalloons: React.FC<HeartBalloonsProps> = ({
     // Immediately remove popped balloon
     removeBalloon(balloon.id);
 
-    // Display the romantic "I Love You ❤️" reveal overlay
-    const messages = [
-      { text: 'I Love You ❤️', subtext: 'Forever & Always • Bangarammm' },
-      { text: 'I Love You ❤️', subtext: 'You make my world so beautiful ✨' },
-      { text: 'I Love You ❤️', subtext: 'My heart beats only for you 💖' },
-      { text: 'I Love You ❤️', subtext: 'Always yours, through eternity 🌹' },
-    ];
-    const picked = messages[Math.floor(Math.random() * messages.length)];
+    // Keep within screen edges
+    const clampedX = Math.max(90, Math.min(window.innerWidth - 90, clientX));
+    const clampedY = Math.max(35, Math.min(window.innerHeight - 35, clientY));
 
-    if (revealTimerRef.current) {
-      clearTimeout(revealTimerRef.current);
-    }
+    // Spawn cute, small "I Love You ❤️" badge directly at the blasted location
+    const newBlastedText: BlastedTextItem = {
+      id: `blast-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      x: clampedX,
+      y: clampedY,
+      text: 'I Love You ❤️',
+    };
 
-    setActiveReveal({
-      id: `reveal-${Date.now()}`,
-      text: picked.text,
-      subtext: picked.subtext,
-      originX: clientX,
-      originY: clientY,
-    });
+    setBlastedTexts((prev) => [...prev, newBlastedText]);
 
-    // Auto dismiss reveal after 3 seconds with smooth fade
-    revealTimerRef.current = setTimeout(() => {
-      setActiveReveal(null);
-    }, 3200);
+    // Clean up after floating and fading out
+    setTimeout(() => {
+      setBlastedTexts((prev) => prev.filter((item) => item.id !== newBlastedText.id));
+    }, 2400);
   };
 
   return (
@@ -674,170 +665,120 @@ export const HeartBalloons: React.FC<HeartBalloonsProps> = ({
         </AnimatePresence>
       </div>
 
-      {/* “I Love You ❤️” Romantic Reveal Modal Overlay */}
-      <AnimatePresence>
-        {activeReveal && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 100,
-              pointerEvents: 'none',
-              padding: '20px',
-            }}
-          >
+      {/* Small “I Love You ❤️” Text Badges popping at the exact blasted location */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 90,
+          overflow: 'hidden',
+        }}
+        aria-hidden="true"
+      >
+        <AnimatePresence>
+          {blastedTexts.map((item) => (
             <motion.div
-              key={activeReveal.id}
+              key={item.id}
               initial={{
-                scale: 0.4,
+                scale: 0.3,
                 opacity: 0,
-                y: 35,
-                rotateX: 20,
+                x: item.x,
+                y: item.y,
               }}
               animate={{
-                scale: [0.4, 1.08, 1],
-                opacity: 1,
-                y: 0,
-                rotateX: 0,
+                scale: [0.3, 1.1, 1],
+                opacity: [0, 1, 1, 0.9, 0],
+                y: item.y - 50,
               }}
               exit={{
-                scale: 0.85,
+                scale: 0.75,
                 opacity: 0,
-                y: -30,
-                transition: { duration: 0.55, ease: 'easeIn' },
+                y: item.y - 65,
+                transition: { duration: 0.3 },
               }}
               transition={{
-                duration: 0.65,
-                ease: [0.16, 1, 0.3, 1],
+                duration: 2.2,
+                times: [0, 0.15, 0.65, 0.85, 1],
+                ease: 'easeOut',
               }}
               style={{
-                position: 'relative',
-                background:
-                  'radial-gradient(ellipse at center, rgba(128, 15, 47, 0.92) 0%, rgba(21, 18, 28, 0.96) 100%)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1.5px solid rgba(255, 111, 145, 0.55)',
-                boxShadow:
-                  '0 25px 70px rgba(0, 0, 0, 0.8), 0 0 50px rgba(214, 40, 85, 0.6), inset 0 1px 2px rgba(255, 244, 232, 0.4)',
-                borderRadius: '32px',
-                padding: '28px 48px',
-                textAlign: 'center',
-                maxWidth: '90vw',
-                pointerEvents: 'auto',
-                cursor: 'pointer',
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
               }}
-              onClick={() => setActiveReveal(null)}
-              title="Click to dismiss or click more balloons!"
             >
-              {/* Floating miniature hearts surrounding the card */}
-              {[...Array(6)].map((_, i) => (
+              {/* Floating micro hearts rising from the text */}
+              {[...Array(3)].map((_, i) => (
                 <motion.div
                   key={i}
-                  initial={{
-                    y: 20,
-                    x: (i - 2.5) * 35,
-                    opacity: 0,
-                    scale: 0.5,
-                  }}
+                  initial={{ y: 0, opacity: 0, scale: 0.5 }}
                   animate={{
-                    y: -50 - i * 12,
+                    y: -22 - i * 8,
+                    x: (i - 1) * 10,
                     opacity: [0, 1, 0],
-                    scale: [0.5, 1.1, 0.7],
+                    scale: [0.5, 1, 0.6],
                   }}
                   transition={{
-                    duration: 2.2,
-                    delay: i * 0.15,
+                    duration: 1.4,
+                    delay: 0.08 + i * 0.1,
                     ease: 'easeOut',
-                    repeat: Infinity,
                   }}
                   style={{
                     position: 'absolute',
-                    top: '10px',
-                    left: '50%',
-                    pointerEvents: 'none',
-                    color: i % 2 === 0 ? '#FF4D6D' : '#D8B879',
-                    filter: 'drop-shadow(0 0 8px rgba(255, 77, 109, 0.8))',
+                    top: '-6px',
+                    color: '#FF4D6D',
+                    filter: 'drop-shadow(0 0 5px rgba(255, 77, 109, 0.9))',
                   }}
                 >
-                  <Heart size={14 + (i % 3) * 4} fill="currentColor" />
+                  <Heart size={10 + i * 2} fill="currentColor" />
                 </motion.div>
               ))}
 
-              {/* Top Accent Sparkles */}
+              {/* Compact, adorable romantic badge */}
               <div
                 style={{
-                  display: 'flex',
+                  background:
+                    'radial-gradient(ellipse at center, rgba(160, 20, 60, 0.95) 0%, rgba(35, 10, 20, 0.96) 100%)',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  border: '1.2px solid rgba(255, 130, 160, 0.65)',
+                  boxShadow:
+                    '0 8px 24px rgba(214, 40, 85, 0.55), 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 244, 232, 0.4)',
+                  borderRadius: '9999px',
+                  padding: '5px 14px',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  marginBottom: '4px',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  transform: 'translate(-50%, -50%)',
                 }}
               >
-                <Sparkles size={16} color="#D8B879" />
+                <Sparkles size={12} color="#D8B879" />
                 <span
                   style={{
-                    fontSize: '0.78rem',
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                    color: '#D8B879',
-                    fontWeight: 600,
+                    fontFamily: "'Great Vibes', cursive",
+                    fontSize: '1.55rem',
+                    color: '#FFF4E8',
+                    textShadow:
+                      '0 0 12px rgba(255, 77, 109, 0.95), 0 0 20px rgba(214, 40, 85, 0.6)',
+                    lineHeight: 1,
+                    letterSpacing: '0.01em',
                   }}
                 >
-                  Forever With Love
+                  {item.text}
                 </span>
-                <Sparkles size={16} color="#D8B879" />
+                <Sparkles size={12} color="#D8B879" />
               </div>
-
-              {/* Main Script Text: “I Love You ❤️” */}
-              <h2
-                style={{
-                  fontFamily: "'Great Vibes', cursive",
-                  fontSize: 'clamp(2.8rem, 7vw, 4.5rem)',
-                  color: '#FFF4E8',
-                  textShadow:
-                    '0 0 25px rgba(255, 77, 109, 0.9), 0 0 50px rgba(214, 40, 85, 0.65)',
-                  margin: '4px 0 8px 0',
-                  lineHeight: 1.1,
-                  userSelect: 'none',
-                }}
-              >
-                {activeReveal.text}
-              </h2>
-
-              {/* Subtitle */}
-              <p
-                style={{
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: 'clamp(0.85rem, 2vw, 1.05rem)',
-                  color: 'rgba(255, 244, 232, 0.85)',
-                  fontWeight: 400,
-                  letterSpacing: '0.02em',
-                  margin: 0,
-                  userSelect: 'none',
-                }}
-              >
-                {activeReveal.subtext}
-              </p>
-
-              {/* Gentle dismiss hint */}
-              <span
-                style={{
-                  display: 'block',
-                  fontSize: '0.7rem',
-                  color: 'rgba(216, 184, 121, 0.65)',
-                  marginTop: '12px',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                Tap any balloon to reveal again ✨
-              </span>
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+          ))}
+        </AnimatePresence>
+      </div>
     </>
   );
 };
